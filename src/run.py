@@ -165,7 +165,7 @@ if __name__ == "__main__":
     proof_config.add_argument('--model_seed', type=int, default=2023)
 
     proof_config.add_argument('--unlearning_epochs', type=int, default=3)
-    proof_config.add_argument('--unlearining_lr', type=float, default=0.01)
+    proof_config.add_argument('--unlearning_lr', type=float, default=0.01)
 
     args = parse_and_group_arguments(parser)
     main(**args)

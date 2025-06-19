@@ -26,6 +26,7 @@ RUN    git clone https://github.com/circify/circ.git \
     && git checkout 78c5d10fb2addb37e62a7b3486d23377c60dcc4b
 
 RUN apt install -y cvc4 coinor-cbc coinor-libcbc-dev m4
+RUN sed -i 's/#!\[deny(warnings)\]/#![allow(warnings)]/' /root/circ/src/lib.rs
 
 WORKDIR /root/circ
 
