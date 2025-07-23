@@ -13,6 +13,9 @@ const u64 LR = {{lr}}
 const u32 NO_FEATURES = {{no_features}}
 const u32 NO_WEIGHTS = {{no_weights}}
 const u32 NO_NEURONS = {{no_neurons}}
+const bool STEP_FORWARD = {{ 'true' if forward else 'false' }}
+const bool STEP_BACKWARD = {{ 'true' if backward else 'false' }}
+const bool STEP_UPDATE = {{ 'true' if update else 'false' }}
 
 def hash_input(u64[NO_FEATURES] x, u64 y) -> field:
     field h = hash(u64_to_field(y), u64_to_field(x[0]))
@@ -109,6 +112,7 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             u64[NO_FEATURES] x = D_prev_X[sample_idx]
             u64 y = D_prev_Y[sample_idx]
 
+            {% if forward %}
             // forward
             {%- if linear_regression or logistic_regression %}
             u64 y_pred = b
@@ -134,8 +138,10 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
                 z_1 = z_1 + remove_shift(a_0[j]*w_1_0[j])
             endfor
             a_1 = sigmoid(z_1)
-            {% endif %}  
+            {% endif %}
+            {% endif %}
 
+            {% if backward %}
             // backward
             {%- if linear_regression or logistic_regression %}
             u64 dy_pred = y_pred - y
@@ -151,7 +157,7 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
                 dw_1_0[i] = dw_1_0[i] + remove_shift(dz_1*a_0[i])
             endfor
             db_1 = db_1 + dz_1
-            // layer 0 
+            // layer 0
             for u32 j in 0..NO_NEURONS do
                 da_0[j] = remove_shift(dz_1*w_1_0[j])
             endfor
@@ -165,7 +171,9 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             db_0[{{j}}] = db_0[{{j}}] + dz_0[{{j}}]
             {% endfor %}
             {% endif %}
+            {% endif %}
 
+            {% if update %}
             // update
             {%- if linear_regression or logistic_regression %}
             for u32 i in 0..NO_FEATURES do
@@ -179,12 +187,13 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             endfor
             b_1 = if sample_idx < no_samples_D_prev then b_1 - remove_shift(LR*db_1) else b_1 fi
 
-            {%- for j in range(no_neurons) %}    
+            {%- for j in range(no_neurons) %}
             for u32 i in 0..NO_FEATURES do
                 w_0_{{j}}[i] = if sample_idx < no_samples_D_prev then w_0_{{j}}[i] - remove_shift(LR*dw_0_{{j}}[i]) else w_0_{{j}}[i] fi
             endfor
             b_0[{{j}}] = if sample_idx < no_samples_D_prev then b_0[{{j}}] - remove_shift(LR*db_0[{{j}}]) else b_0[{{j}}] fi
             {% endfor %}
+            {% endif %}
             {% endif %}
         endfor
         for u32 sample_idx in 0..MAX_SAMPLES_D_PLUS do
@@ -213,6 +222,7 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             u64[NO_FEATURES] x = D_plus_X[sample_idx]
             u64 y = D_plus_Y[sample_idx]
 
+            {% if forward %}
             // forward
             {%- if neural_network %}
             {%- for j in range(no_neurons) %}
@@ -229,7 +239,7 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
                 z_1 = z_1 + remove_shift(a_0[j]*w_1_0[j])
             endfor
             a_1 = sigmoid(z_1)
-            {% endif %}  
+            {% endif %}
             {%- if linear_regression or logistic_regression %}
             u64 y_pred = b
             for u32 i in 0..NO_FEATURES do
@@ -239,7 +249,9 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             {%- if logistic_regression %}
             y_pred = sigmoid(y_pred)
             {% endif %}
+            {% endif %}
 
+            {% if backward %}
             // backward
             {%- if linear_regression or logistic_regression %}
             u64 dy_pred = y_pred - y
@@ -255,7 +267,7 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
                 dw_1_0[i] = dw_1_0[i] + remove_shift(dz_1*a_0[i])
             endfor
             db_1 = db_1 + dz_1
-            // layer 0 
+            // layer 0
             for u32 j in 0..NO_NEURONS do
                 da_0[j] = remove_shift(dz_1*w_1_0[j])
             endfor
@@ -269,6 +281,8 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             db_0[{{j}}] = db_0[{{j}}] + dz_0[{{j}}]
             {% endfor %}
             {% endif %}
+            {% endif %}
+            {% if update %}
             // update
             {%- if linear_regression or logistic_regression %}
             for u32 i in 0..NO_FEATURES do
@@ -282,12 +296,13 @@ def main(public field h_D_prev, public field h_D, public field h_m, public field
             endfor
             b_1 = if sample_idx < no_samples_D_plus then b_1 - remove_shift(LR*db_1) else b_1 fi
 
-            {%- for j in range(no_neurons) %}    
+            {%- for j in range(no_neurons) %}
             for u32 i in 0..NO_FEATURES do
                 w_0_{{j}}[i] = if sample_idx < no_samples_D_plus then w_0_{{j}}[i] - remove_shift(LR*dw_0_{{j}}[i]) else w_0_{{j}}[i] fi
             endfor
             b_0[{{j}}] = if sample_idx < no_samples_D_plus then b_0[{{j}}] - remove_shift(LR*db_0[{{j}}]) else b_0[{{j}}] fi
             {% endfor %}
+            {% endif %}
             {% endif %}
         endfor        
     endfor
