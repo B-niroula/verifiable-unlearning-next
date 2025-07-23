@@ -135,6 +135,32 @@ def main(trials_dir, trial_name, technique, mode, dataset_config, proof_config):
     elif  proof_config['proof_system'] == 'snark':
         circ.spartan_snark(params, working_dir)
 
+    log = working_dir.joinpath('circ.log.txt').read_text()
+    import re
+    r_full = int(re.findall(r'- final R1CS size: (\d+)', log).pop())
+
+    if 'neural_network' in proof_config['classifier'] and technique == 'retraining' and mode == 'train':
+        step_dirs = {
+            'forward': (True, False, False),
+            'forward_backward': (True, True, False)
+        }
+        sizes = {}
+        for name, step in step_dirs.items():
+            sdir = working_dir / name
+            proof_src_step, params_step = circuit_train_retraining(proof_config, model, D_prev, U_prev, D_plus, steps=step)
+            sdir.mkdir(exist_ok=True)
+            sdir.joinpath('circuit.zok').write_text(proof_src_step)
+            circ.spartan_nizk(params_step, sdir)
+            slog = sdir.joinpath('circ.log.txt').read_text()
+            sizes[name] = int(re.findall(r'- final R1CS size: (\d+)', slog).pop())
+        r_forward = sizes['forward']
+        r_forward_backward = sizes['forward_backward']
+        r_backward = r_forward_backward - r_forward
+        r_update = r_full - r_forward_backward
+        print(f"[+] R1CS size - forward: {r_forward}")
+        print(f"[+] R1CS size - backward: {r_backward}")
+        print(f"[+] R1CS size - update: {r_update}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

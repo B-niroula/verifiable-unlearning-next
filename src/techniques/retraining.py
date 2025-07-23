@@ -4,7 +4,7 @@ from hashs.utils import hash_dataset, hash_list
 from jinja2 import Template
 
 
-def circuit_train_retraining(config, model, D_prev, U_prev, D_plus):
+def circuit_train_retraining(config, model, D_prev, U_prev, D_plus, steps=(True, True, True)):
 
     # init model
     weights_init = model.init_model(config, D_plus.no_features)
@@ -30,14 +30,15 @@ def circuit_train_retraining(config, model, D_prev, U_prev, D_plus):
 
     # circuit
     template = Template(config['circuit_dir'].joinpath('retraining-circuit-train.template').read_text())
+    forward, backward, update = steps
     proof_src = template.render(max_samples_D_prev=D_prev.max_size,
                                 max_samples_U_prev=U_prev.max_size,
                                 max_samples_D_plus=D_plus.max_size,
                                 precision=f'{config["precision"]:.0f}',
-                                epochs=f'{config["epochs"]:.0f}', 
-                                no_features=f'{D_plus.no_features:.0f}', 
-                                no_weights=f'{len(model.weights):.0f}', 
-                                lr=f'{config["precision"]*config["lr"]:.0f}', 
+                                epochs=f'{config["epochs"]:.0f}',
+                                no_features=f'{D_plus.no_features:.0f}',
+                                no_weights=f'{len(model.weights):.0f}',
+                                lr=f'{config["precision"]*config["lr"]:.0f}',
                                 linear_regression=config['classifier'] == 'linear_regression',
                                 logistic_regression=config['classifier'] ==  'logistic_regression',
                                 neural_network= 'neural_network' in config['classifier'],
@@ -45,7 +46,10 @@ def circuit_train_retraining(config, model, D_prev, U_prev, D_plus):
                                 W0=f'{int(0.5*config["precision"]):.0f}',
                                 W1=f'{int(0.1501*config["precision"]):.0f}',
                                 W3=f'{int(0.0016*config["precision"]):.0f}',
-                                weights_init_str=weights_init_str)
+                                weights_init_str=weights_init_str,
+                                forward=forward,
+                                backward=backward,
+                                update=update)
 
     # params
     params = [
